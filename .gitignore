@@ -1,0 +1,17 @@
+# Data files
+*.csv
+*.shp
+*.shx
+*.dbf
+*.prj
+*.geojson
+*.json
+*.cpg
+
+# Python virtual environment
+venv/
+*.pyc
+__pycache__/
+
+# System files
+.DS_Store
