@@ -12,6 +12,7 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-curve/leaflet.curve.js"></script>
 
     <style>
       body,
@@ -50,6 +51,92 @@
           transparent: true,
         })
         .addTo(myMap);
+
+      // var educationLayerView = L.tileLayer
+      //   .wms(geoServerBaseUrl, {
+      //     layers: "geo_server_practice:pk_selected_dis",
+      //     format: "image/png",
+      //     transparent: true,
+      //   })
+      //   .addTo(myMap);
+      var analysisLayer = L.layerGroup().addTo(myMap);
+      myMap.on("click", function (e) {
+        console.log(e.latlng);
+        var requestData = {
+          latitude: e.latlng.lat,
+          longitude: e.latlng.lng,
+          radius_km: 5,
+        };
+        findNearByFacilitiesUrl =
+          "http://127.0.0.1:8000/api/find_nearby_facilities";
+        fetch(findNearByFacilitiesUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            analysisLayer.clearLayers();
+
+            if (data.features && data.features.length > 0) {
+              var allData = data.features;
+              allData.forEach(function (features) {
+                // --- Start of the block to replace ---
+
+                var coordinates = features.geometry.coordinates;
+                var schoolLatLng = [coordinates[1], coordinates[0]]; // Correctly reverse coordinates
+                let schoolType = features.properties.amenity;
+
+                // --- This is the corrected logic for the control point ---
+                let startPoint = [e.latlng.lat, e.latlng.lng];
+                let endPoint = schoolLatLng;
+
+                // 1. Calculate the difference vector
+                let latDiff = endPoint[0] - startPoint[0];
+                let lngDiff = endPoint[1] - startPoint[1];
+
+                // 2. Calculate the perpendicular offset
+                let bendFactor = -0.1; // You can adjust this value
+                let perpendicularOffsetX = -lngDiff * bendFactor;
+                let perpendicularOffsetY = latDiff * bendFactor;
+
+                // 3. Calculate the midpoint
+                let midPointLat = (startPoint[0] + endPoint[0]) / 2;
+                let midPointLng = (startPoint[1] + endPoint[1]) / 2;
+
+                // 4. Calculate the final control point by applying the offset to the midpoint
+                let controlPoint = [
+                  midPointLat + perpendicularOffsetY,
+                  midPointLng + perpendicularOffsetX,
+                ];
+                // --- End of the corrected logic ---
+
+                let curvePath = ["M", startPoint, "Q", controlPoint, endPoint];
+
+                const colorMap = {
+                  university: "red",
+                  school: "green",
+                  library: "orange",
+                  conference_centre: "blue",
+                  restaurant: "purple",
+                  kindergarten: "yellow",
+                  college: "darkgreen",
+                };
+
+                let lineColor = colorMap[schoolType] || "gray";
+
+                L.curve(curvePath, { color: lineColor, weight: 2 }).addTo(
+                  analysisLayer
+                );
+              });
+              L.marker(e.latlng).addTo(analysisLayer);
+            } else {
+              L.marker(e.latlng).addTo(analysisLayer);
+
+              alert("No facility found in this radius。");
+            }
+          });
+      });
     </script>
   </body>
 </html>
