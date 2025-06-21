@@ -1,4 +1,50 @@
-# Data files
+# =================================================================
+# General
+# =================================================================
+# System files
+.DS_Store
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+
+# =================================================================
+# Backend / Python
+# =================================================================
+# Virtual environment folder inside the backend directory
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables file (important for security)
+.env
+
+
+# =================================================================
+# Frontend / Node.js
+# =================================================================
+# Node modules folder inside the frontend directory (VERY IMPORTANT)
+frontend/node_modules/
+
+# Build output folder for the frontend
+frontend/dist/
+
+# Vite specific cache
+frontend/.vite/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# =================================================================
+# Data Files
+# =================================================================
+# Your original list of data files
 *.csv
 *.shp
 *.shx
@@ -7,11 +53,3 @@
 *.geojson
 *.json
 *.cpg
-
-# Python virtual environment
-venv/
-*.pyc
-__pycache__/
-
-# System files
-.DS_Store

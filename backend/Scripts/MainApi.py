@@ -14,7 +14,7 @@ import json
 # command activate venv environment :  .\venv\Scripts\activate
 
 # Initialize FastAPI app
-# Server start command: uvicorn MainApi:app --reload
+# Server start command: uvicorn Scripts.MainApi:app --reload
 app = FastAPI()
 DATABASE_CONNECTION_STRING = (
     "postgresql://postgres:960531wdxxm@localhost:5432/geoserver_practice"
@@ -29,6 +29,7 @@ origins = [
     "http://localhost:8080",
     "http://127.0.0.1",
     "http://127.0.0.1:5500",  # Common port for VS Code Live Server
+    "http://localhost:5173",
     "null",  # Allows requests from local HTML files (file://)
 ]
 
