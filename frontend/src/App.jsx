@@ -1,7 +1,12 @@
 import React from "react";
 import { useState } from "react";
 import "./App.css";
-import { MapContainer, TileLayer, WMSTileLayer } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  WMSTileLayer,
+  LayersControl,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import AnalysisResultLayer from "./AnalysisResultLayer";
 import MapClickHandler from "./MapClickHandler";
@@ -29,24 +34,37 @@ function App() {
         zoom={initialZoom}
         style={{ height: "100vh", width: "100%" }}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy;{" "}
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="OpenStreetMap">
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy;{" "}
           <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>{" "}
           contributors'
-        />
-        <WMSTileLayer
-          url={geoServerBaseUrl}
-          layers={provinceLayerName}
-          format="image/png"
-          transparent="true"
-        />
-        <WMSTileLayer
-          url={geoServerBaseUrl}
-          layers={educationLayerName}
-          format="image/png"
-          transparent="true"
-        />
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.Overlay checked name="Provinces">
+            <WMSTileLayer
+              url={geoServerBaseUrl}
+              layers={provinceLayerName}
+              format="image/png"
+              transparent="true"
+            />
+          </LayersControl.Overlay>
+          <LayersControl.Overlay checked name="Education Facilities">
+            <WMSTileLayer
+              url={geoServerBaseUrl}
+              layers={educationLayerName}
+              format="image/png"
+              transparent="true"
+            />
+          </LayersControl.Overlay>
+          {/* <LayersControl.Overlay
+            checked
+            name="Population"
+          ></LayersControl.Overlay> */}
+        </LayersControl>
+
         <MapClickHandler onDataFetched={handleAnalysisData} />
         <AnalysisResultLayer
           analysisData={analysisData}
