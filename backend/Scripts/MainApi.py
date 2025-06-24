@@ -14,7 +14,7 @@ import json
 # command activate venv environment :  .\venv\Scripts\activate
 
 # Initialize FastAPI app
-# Server start command: uvicorn Scripts.MainApi:app --reload
+# Server start command: python -m uvicorn Scripts.MainApi:app --reload
 app = FastAPI()
 DATABASE_CONNECTION_STRING = (
     "postgresql://postgres:960531wdxxm@localhost:5432/geoserver_practice"

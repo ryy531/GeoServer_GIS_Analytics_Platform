@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, WMSTileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import AnalysisResultLayer from "./AnalysisResultLayer";
 import MapClickHandler from "./MapClickHandler";
-
+//run code : npm run dev
 function App() {
   const initialPosition = [30.3, 69.3];
   const initialZoom = 6;
