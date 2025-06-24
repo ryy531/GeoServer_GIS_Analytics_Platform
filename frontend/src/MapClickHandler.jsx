@@ -17,7 +17,8 @@ function MapClickHandler({ onDataFetched }) {
         "http://127.0.0.1:8000/api/find_nearby_facilities";
       const wmsBaseUrl =
         "http://localhost:8080/geoserver/geo_server_practice/wms";
-      const layerName = "geo_server_practice:education_facilities_points";
+      const layerName =
+        "geo_server_practice:education_facilities_points,geo_server_practice:admin_county_polygon";
       const mapBounds = map.getBounds().toBBoxString();
       const mapSize = map.getSize();
       const crs = "EPSG:4326";
@@ -54,16 +55,34 @@ function MapClickHandler({ onDataFetched }) {
       fetch(url.toString())
         .then((response) => response.json())
         .then((data) => {
-          if (data.features && data.features.length > 0) {
-            const clickedFeature = data.features[0];
-            const properties = clickedFeature.properties;
-            let popupContent = "<b>Feature Info</b><br><hr>";
+          const displayPopup = (featureToShow, title) => {
+            const properties = featureToShow.properties;
+            let popupContent = `<div style="max-height: 150px; overflow-y: auto; padding-right: 15px;">`;
+            popupContent += `<b>${title}</b><br><hr>`;
             for (const key in properties) {
               if (Object.prototype.hasOwnProperty.call(properties, key)) {
                 popupContent += `<b>${key}:</b> ${properties[key]}<br>`;
               }
             }
             L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map);
+          };
+
+          const pointFeature = data.features.find((feature) =>
+            feature.id.startsWith("education_facilities_points")
+          );
+          if (pointFeature) {
+            console.log(
+              "Prioritizing Point Feature:",
+              pointFeature.properties.name
+            );
+            displayPopup(pointFeature, "Facility Info");
+          } else if (data.features && data.features.length > 0) {
+            const polygonFeature = data.features[0];
+            console.log(
+              "No point found, displaying Polygon Feature:",
+              polygonFeature.properties.name_en
+            );
+            displayPopup(polygonFeature, "Province Info");
           } else {
             console.log("No features found at this location.");
           }

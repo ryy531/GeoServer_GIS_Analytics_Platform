@@ -76,9 +76,9 @@ function AnalysisResultLayer({ analysisData, clickedPoint }) {
       });
       L.marker(clickedPoint).addTo(layerGroup);
     } else {
-      L.marker(clickedPoint).addTo(layerGroup);
-
-      alert("No facility found in this radius。");
+      L.marker(clickedPoint)
+        .bindPopup("No facilities found in this radius")
+        .addTo(layerGroup).openPopup;
     }
     return () => {
       map.removeLayer(layerGroup);
