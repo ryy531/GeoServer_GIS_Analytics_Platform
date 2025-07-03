@@ -22,6 +22,7 @@ DATABASE_CONNECTION_STRING = (
 engine = create_engine(DATABASE_CONNECTION_STRING)
 education_table_name = "education_facilities_points"
 polygon_table_name = "admin_county_polygon"
+test_population_name = "v_population_chitral"
 # --- CORS (Cross-Origin Resource Sharing) Middleware Configuration ---
 # This allows our Leaflet HTML file to make requests to this backend
 origins = [
@@ -47,6 +48,12 @@ class NearbySearchRequest(BaseModel):
     latitude: float
     longitude: float
     radius_km: float
+
+
+class BufferRequest(BaseModel):
+    latitude: float
+    longitude: float
+    radius_m: float
 
 
 # --- API Endpoints ---
@@ -80,3 +87,44 @@ async def find_nearby_facilities(request: NearbySearchRequest):
             status_code=500,
             detail=str(e),
         )
+
+
+@app.post("/api/population_in_buffer")
+async def get_population_in_buffer(request: BufferRequest):
+    SQL_QUERY_POPULATION_POINTS = text(
+        """
+        SELECT SUM("TotalPopulation")
+        FROM pak_unadj_constrained
+        WHERE ST_DWithin(
+            geometry::geography,
+            ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+            :radius_m
+        );
+    """
+    )
+    conn = engine.connect()
+    total_population = None
+    try:
+        result = conn.execute(
+            SQL_QUERY_POPULATION_POINTS,
+            {
+                "lat": request.latitude,
+                "lon": request.longitude,
+                "radius_m": request.radius_m,
+            },
+        )
+
+        total_population = result.scalar_one_or_none()
+    finally:
+        conn.close()
+
+    calculated_population = int(total_population) if total_population is not None else 0
+    print(
+        f"in radius {request.radius_m} meter, the population calculated is : {calculated_population}"
+    )
+    return {
+        "latitude": request.latitude,
+        "longitude": request.longitude,
+        "radius_m": request.radius_m,
+        "total_population_in_buffer": calculated_population,
+    }

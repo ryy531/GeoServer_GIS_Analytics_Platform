@@ -59,10 +59,14 @@ function App() {
               transparent="true"
             />
           </LayersControl.Overlay>
-          {/* <LayersControl.Overlay
-            checked
-            name="Population"
-          ></LayersControl.Overlay> */}
+          <LayersControl.Overlay checked name="Population (Chitral Test)">
+            <WMSTileLayer
+              url={geoServerBaseUrl}
+              layers="geo_server_practice:v_population_chitral"
+              format="image/png"
+              transparent="true"
+            />
+          </LayersControl.Overlay>
         </LayersControl>
 
         <MapClickHandler onDataFetched={handleAnalysisData} />

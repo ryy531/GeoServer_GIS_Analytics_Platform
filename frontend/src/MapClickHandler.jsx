@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 function MapClickHandler({ onDataFetched }) {
   const map = useMap();
+  const analysisCircleRef = useRef(null);
   useEffect(() => {
     if (!map) return;
     const handleClick = (e) => {
@@ -55,7 +56,7 @@ function MapClickHandler({ onDataFetched }) {
       fetch(url.toString())
         .then((response) => response.json())
         .then((data) => {
-          const displayPopup = (featureToShow, title) => {
+          const displayPopup = (featureToShow, title, populationCount) => {
             const properties = featureToShow.properties;
             let popupContent = `<div style="max-height: 150px; overflow-y: auto; padding-right: 15px;">`;
             popupContent += `<b>${title}</b><br><hr>`;
@@ -63,6 +64,9 @@ function MapClickHandler({ onDataFetched }) {
               if (Object.prototype.hasOwnProperty.call(properties, key)) {
                 popupContent += `<b>${key}:</b> ${properties[key]}<br>`;
               }
+            }
+            if (typeof populationCount === "number") {
+              popupContent += `<hr><b>Population in Buffer:</b> ${populationCount.toLocaleString()}<br>`;
             }
             L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map);
           };
@@ -75,7 +79,34 @@ function MapClickHandler({ onDataFetched }) {
               "Prioritizing Point Feature:",
               pointFeature.properties.name
             );
-            displayPopup(pointFeature, "Facility Info");
+
+            if (analysisCircleRef.current) {
+              map.removeLayer(analysisCircleRef.current);
+            }
+            const lngLat = pointFeature.geometry.coordinates;
+            const centerLatLng = [lngLat[1], lngLat[0]];
+            const radiusMeters = 5000;
+            analysisCircleRef.current = L.circle(centerLatLng, {
+              radius: radiusMeters,
+              color: "green",
+              fillColor: "#28a745",
+              fillOpacity: 0.2,
+            }).addTo(map);
+            const analysisRequestData = {
+              latitude: centerLatLng[0],
+              longitude: centerLatLng[1],
+              radius_m: radiusMeters,
+            };
+            fetch("http://127.0.0.1:8000/api/population_in_buffer", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(analysisRequestData),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                const count = data.total_population_in_buffer;
+                displayPopup(pointFeature, "Facility Info", count);
+              });
           } else if (data.features && data.features.length > 0) {
             const polygonFeature = data.features[0];
             console.log(
