@@ -67,6 +67,14 @@ function App() {
               transparent="true"
             />
           </LayersControl.Overlay>
+          <LayersControl.Overlay name="Population (Nationwide)">
+            <WMSTileLayer
+              url={geoServerBaseUrl}
+              layers="geo_server_practice:pak_unadj_constrained"
+              format="image/png"
+              transparent={true}
+            />
+          </LayersControl.Overlay>
         </LayersControl>
 
         <MapClickHandler onDataFetched={handleAnalysisData} />

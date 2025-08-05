@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
+import { findNearbyFacilities } from "./services/apiService";
+import { useAnalysisLogic } from "./hooks/useAnalysisLogic";
 
 function MapClickHandler({ onDataFetched }) {
   const map = useMap();
-  const analysisCircleRef = useRef(null);
+  const { runAnalysis } = useAnalysisLogic(map);
   useEffect(() => {
     if (!map) return;
     const handleClick = (e) => {
@@ -14,8 +16,8 @@ function MapClickHandler({ onDataFetched }) {
         longitude: e.latlng.lng,
         radius_km: 5,
       };
-      const findNearByFacilitiesUrl =
-        "http://127.0.0.1:8000/api/find_nearby_facilities";
+      // const findNearByFacilitiesUrl =
+      //   "http://127.0.0.1:8000/api/find_nearby_facilities";
       const wmsBaseUrl =
         "http://localhost:8080/geoserver/geo_server_practice/wms";
       const layerName =
@@ -44,86 +46,24 @@ function MapClickHandler({ onDataFetched }) {
       url.search = new URLSearchParams(params).toString();
       console.log("Generated GetFeatureInfo URL:", url.toString());
 
-      fetch(findNearByFacilitiesUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          onDataFetched(data, e.latlng);
-        });
+      findNearbyFacilities(
+        requestData.latitude,
+        requestData.longitude,
+        requestData.radius_km
+      ).then((data) => {
+        onDataFetched(data, e.latlng);
+      });
       fetch(url.toString())
         .then((response) => response.json())
         .then((data) => {
-          const displayPopup = (featureToShow, title, populationCount) => {
-            const properties = featureToShow.properties;
-            let popupContent = `<div style="max-height: 150px; overflow-y: auto; padding-right: 15px;">`;
-            popupContent += `<b>${title}</b><br><hr>`;
-            for (const key in properties) {
-              if (Object.prototype.hasOwnProperty.call(properties, key)) {
-                popupContent += `<b>${key}:</b> ${properties[key]}<br>`;
-              }
-            }
-            if (typeof populationCount === "number") {
-              popupContent += `<hr><b>Population in Buffer:</b> ${populationCount.toLocaleString()}<br>`;
-            }
-            L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map);
-          };
-
-          const pointFeature = data.features.find((feature) =>
-            feature.id.startsWith("education_facilities_points")
-          );
-          if (pointFeature) {
-            console.log(
-              "Prioritizing Point Feature:",
-              pointFeature.properties.name
-            );
-
-            if (analysisCircleRef.current) {
-              map.removeLayer(analysisCircleRef.current);
-            }
-            const lngLat = pointFeature.geometry.coordinates;
-            const centerLatLng = [lngLat[1], lngLat[0]];
-            const radiusMeters = 5000;
-            analysisCircleRef.current = L.circle(centerLatLng, {
-              radius: radiusMeters,
-              color: "green",
-              fillColor: "#28a745",
-              fillOpacity: 0.2,
-            }).addTo(map);
-            const analysisRequestData = {
-              latitude: centerLatLng[0],
-              longitude: centerLatLng[1],
-              radius_m: radiusMeters,
-            };
-            fetch("http://127.0.0.1:8000/api/population_in_buffer", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(analysisRequestData),
-            })
-              .then((response) => response.json())
-              .then((data) => {
-                const count = data.total_population_in_buffer;
-                displayPopup(pointFeature, "Facility Info", count);
-              });
-          } else if (data.features && data.features.length > 0) {
-            const polygonFeature = data.features[0];
-            console.log(
-              "No point found, displaying Polygon Feature:",
-              polygonFeature.properties.name_en
-            );
-            displayPopup(polygonFeature, "Province Info");
-          } else {
-            console.log("No features found at this location.");
-          }
+          runAnalysis(data, e);
         });
     };
     map.on("click", handleClick);
     return () => {
       map.off("click", handleClick);
     };
-  }, [map, onDataFetched]);
+  }, [map, onDataFetched, runAnalysis]);
   return null;
 }
 export default MapClickHandler;
