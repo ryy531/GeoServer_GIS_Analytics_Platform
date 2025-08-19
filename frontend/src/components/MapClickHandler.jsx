@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
-import { findNearbyFacilities } from "./services/apiService";
-import { useAnalysisLogic } from "./hooks/useAnalysisLogic";
+import { findNearbyFacilities } from "../services/apiService";
+import { useAnalysisLogic } from "../hooks/useAnalysisLogic";
 
 function MapClickHandler({ onDataFetched }) {
   const map = useMap();

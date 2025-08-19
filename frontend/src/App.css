@@ -1,4 +1,33 @@
 .App {
+  position: relative;
   width: 100vw;
   height: 100vh;
+}
+/* A more refined style for our Dashboard container */
+.dashboard-container {
+  position: absolute;
+  top: 10px; /* Give it a bit more space from the top */
+  left: 50px; /* Give it a bit more space from the left */
+  z-index: 1000;
+  background-color: black;
+  padding: 8px; /* Increase padding a bit */
+  border-radius: 8px; /* Softer corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* A more pronounced shadow */
+  width: auto; /* Let the width be determined by its content */
+  min-width: 220px; /* But don't let it get too narrow */
+  max-width: 300px; /* And don't let it get too wide */
+}
+
+/* Let's also style the elements inside the dashboard */
+.dashboard-container h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+.dashboard-container select {
+  width: 100%; /* Make the select box fill the container width */
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }

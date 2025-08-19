@@ -43,3 +43,22 @@ export const getPopulationInBuffer = (latitude, longitude, radius_m) => {
     body: JSON.stringify(requestBody),
   }).then((response) => response.json());
 };
+export const getProvinces = () => {
+  return fetch(`${API_BASE_URL}/provinces`).then((response) => response.json());
+};
+
+export const getProvinceBounds = (provinceName) => {
+  return fetch(`${API_BASE_URL}/province_bounds/${provinceName}`).then(
+    (response) => response.json()
+  );
+};
+
+export const getFacilityStats = (provinceName) => {
+  // We need to ensure the provinceName is properly encoded for a URL
+  const encodedProvinceName = encodeURIComponent(provinceName);
+
+  return fetch(`${API_BASE_URL}/facility_stats/${encodedProvinceName}`, {
+    // Add this credentials option
+    credentials: "include",
+  }).then((response) => response.json());
+};
