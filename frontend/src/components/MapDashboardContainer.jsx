@@ -1,11 +1,12 @@
 // File: frontend/src/components/MapDashboardContainer.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 // Import all necessary functions from our apiService
 import {
   getProvinces,
   getProvinceBounds,
   getFacilityStats,
+  getPopulationPyramid,
 } from "../services/apiService";
 import "../App.css";
 import {
@@ -19,20 +20,35 @@ import "leaflet/dist/leaflet.css";
 import AnalysisResultLayer from "./AnalysisResultLayer";
 import MapClickHandler from "./MapClickHandler";
 import Dashboard from "./Dashboard";
+import CollapsiblePanel from "./CollapsiblePanel";
+import PopulationPyramidChart from "./PopulationPyramidChart";
 
 // --- Helper Component: MapController ---
 // Defined outside the main component to prevent re-creation on every render.
 // Its job is to perform map actions like fitBounds or resetting the view.
-function MapController({ bounds, initialPosition, initialZoom }) {
+function MapController({
+  bounds,
+  selectedProvince,
+  initialPosition,
+  initialZoom,
+}) {
   const map = useMap();
+  const lastFittedProvinceRef = useRef(null);
+
   useEffect(() => {
-    if (bounds) {
-      map.fitBounds(bounds);
-    } else {
-      // If no bounds are provided, reset the view to the initial nationwide position.
-      map.setView(initialPosition, initialZoom);
+    // Only refit the map if the selected province has actually changed.
+    // This prevents unwanted re-focusing when other parts of the app cause a re-render.
+    if (selectedProvince !== lastFittedProvinceRef.current) {
+      if (bounds) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      } else {
+        // This handles the "Nationwide" case where bounds are null.
+        map.setView(initialPosition, initialZoom);
+      }
+      // Update the ref to the province we just fitted.
+      lastFittedProvinceRef.current = selectedProvince;
     }
-  }, [bounds, map, initialPosition, initialZoom]);
+  }, [bounds, selectedProvince, map, initialPosition, initialZoom]);
   return null;
 }
 
@@ -45,6 +61,7 @@ function MapDashboardContainer() {
   const [bounds, setBounds] = useState(null);
   const [cqlFilter, setCqlFilter] = useState(null);
   const [stats, setStats] = useState(null);
+  const [populationData, setPopulationData] = useState(null);
   const [analysisData, setAnalysisData] = useState(null);
   const [clickedPoint, setClickedPoint] = useState(null);
 
@@ -71,38 +88,64 @@ function MapDashboardContainer() {
 
   // Effect to run whenever the selectedProvince state changes.
   useEffect(() => {
+    // This flag prevents state updates if the component unmounts or if the
+    // dependency (selectedProvince) changes before the async operations complete.
+    let isMounted = true;
+
     if (selectedProvince) {
       // 1. Fetch the geographical bounds for the selected province to zoom the map.
       getProvinceBounds(selectedProvince)
         .then((newBounds) => {
-          setBounds(newBounds);
+          if (isMounted) setBounds(newBounds);
         })
         .catch((error) =>
           console.error("Failed to fetch province bounds:", error)
         );
-
       // 2. Fetch the facility statistics for the selected province.
       getFacilityStats(selectedProvince)
         .then((newStats) => {
-          setStats(newStats);
+          if (isMounted) setStats(newStats);
         })
         .catch((error) =>
           console.error("Failed to fetch facility stats:", error)
         );
 
+      // Fetch population pyramid data for the selected province.
+      getPopulationPyramid(selectedProvince)
+        .then((data) => {
+          if (isMounted) setPopulationData(data);
+        })
+        .catch((error) =>
+          console.error("Failed to fetch population pyramid data:", error)
+        );
+
       // 3. Create a CQL filter string to filter map layers.
-      // We must escape any single quotes in the province name to prevent CQL injection or errors.
-      // For example, a name like "d'Arcy" would become "d''Arcy".
       const escapedProvince = selectedProvince.replace(/'/g, "''");
       const filter = `province_name = '${escapedProvince}'`;
-      console.log("Generated CQL Filter:", filter); // 添加一句日志，方便我们调试
-      setCqlFilter(filter);
+      if (isMounted) setCqlFilter(filter);
     } else {
       // If no province is selected, reset all related states.
-      setCqlFilter(null);
-      setStats(null);
-      setBounds(null); // Optional: you might want to reset the view to nationwide here.
+      if (isMounted) {
+        setCqlFilter(null);
+        setStats(null);
+        setBounds(null);
+      }
+
+      // Fetch nationwide population data when no province is selected.
+      getPopulationPyramid("Nationwide")
+        .then((data) => {
+          if (isMounted) setPopulationData(data);
+        })
+        .catch((error) =>
+          console.error("Failed to fetch population pyramid data:", error)
+        );
     }
+
+    // Cleanup function to run when the component unmounts or before the effect re-runs.
+    // This prevents setting state on an unmounted component and fixes race conditions.
+    return () => {
+      isMounted = false;
+    };
   }, [selectedProvince]); // This effect depends on the selectedProvince state.
 
   // --- Event Handlers ---
@@ -128,6 +171,7 @@ function MapDashboardContainer() {
       >
         <MapController
           bounds={bounds}
+          selectedProvince={selectedProvince}
           initialPosition={initialPosition}
           initialZoom={initialZoom}
         />
@@ -181,6 +225,15 @@ function MapDashboardContainer() {
           clickedPoint={clickedPoint}
         />
       </MapContainer>
+
+      {/* --- 新的可折叠面板，用于显示图表 --- */}
+      {populationData && (
+        <CollapsiblePanel
+          title={`Population Pyramid: ${selectedProvince || "Nationwide"}`}
+        >
+          <PopulationPyramidChart data={populationData} />
+        </CollapsiblePanel>
+      )}
     </div>
   );
 }

@@ -62,3 +62,12 @@ export const getFacilityStats = (provinceName) => {
     credentials: "include",
   }).then((response) => response.json());
 };
+
+export const getPopulationPyramid = (provinceName) => {
+  // We need to ensure the provinceName is properly encoded for a URL
+  const encodedProvinceName = encodeURIComponent(provinceName);
+
+  return fetch(
+    `${API_BASE_URL}/population_pyramid/${encodedProvinceName}`
+  ).then((response) => response.json());
+};

@@ -17,7 +17,7 @@ function Dashboard({ provinces, selectedProvince, onProvinceChange, stats }) {
         ))}
       </select>
 
-      {/* --- 新增的统计数据显示区 --- */}
+      {/* --- 统计数据显示区 --- */}
       {stats && (
         <div className="stats-display">
           <hr />
