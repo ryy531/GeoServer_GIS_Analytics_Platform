@@ -22,6 +22,7 @@ app = FastAPI()
 # --- CORS Middleware Configuration ---
 # This allows the frontend (running on port 5173) to communicate with the backend.
 origins = [
+    "https://geo-server-gis-analytics-platform-6axioomn5.vercel.app",
     "http://localhost",
     "http://localhost:8080",
     "http://127.0.0.1",
