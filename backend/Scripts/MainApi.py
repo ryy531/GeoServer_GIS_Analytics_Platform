@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import analysis, features, dashboard
 
 # --- Initialize FastAPI app ---
-# command activate venv environment :  .\venv\Scripts\activate
+# command activate venv environment :  .\venv\Scripts\Activate.ps1
 
 
 # Server start command: python -m uvicorn Scripts.MainApi:app --reload
