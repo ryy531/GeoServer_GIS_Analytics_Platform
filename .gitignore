@@ -53,3 +53,4 @@ yarn-error.log*
 *.geojson
 *.json
 *.cpg
+.env.local
