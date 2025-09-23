@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 function CollapsiblePanel({ title, children }) {
-  const [isOpen, setIsOpen] = useState(false); // 默认关闭
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="collapsible-panel">

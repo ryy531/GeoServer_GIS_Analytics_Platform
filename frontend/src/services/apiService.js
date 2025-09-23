@@ -71,3 +71,12 @@ export const getPopulationPyramid = (provinceName) => {
     `${API_BASE_URL}/population_pyramid/${encodedProvinceName}`
   ).then((response) => response.json());
 };
+
+export const analyzeImageWithAI = (imageFile) => {
+  const fromData = new FormData();
+  fromData.append("image", imageFile);
+  return fetch(`${API_BASE_URL}/ai/detect_objects`, {
+    method: "POST",
+    body: fromData,
+  }).then((response) => response.json());
+};

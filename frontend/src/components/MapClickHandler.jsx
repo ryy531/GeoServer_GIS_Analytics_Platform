@@ -18,8 +18,7 @@ function MapClickHandler({ onDataFetched }) {
       };
       // const findNearByFacilitiesUrl =
       //   "http://127.0.0.1:8000/api/find_nearby_facilities";
-      const wmsBaseUrl =
-        "http://localhost:8080/geoserver/geo_server_practice/wms";
+      const wmsBaseUrl = import.meta.env.VITE_GEOSERVER_BASE_URL;
       const layerName =
         "geo_server_practice:education_facilities_points,geo_server_practice:admin_county_polygon";
       const mapBounds = map.getBounds().toBBoxString();

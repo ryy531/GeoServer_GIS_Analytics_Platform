@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 # Import the router objects from our new router files
-from .routers import analysis, features, dashboard
+from .routers import analysis, features, dashboard, geoai
 
 # --- Initialize FastAPI app ---
 # command activate venv environment :  .\venv\Scripts\Activate.ps1
@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(features.router)
 app.include_router(analysis.router)
 app.include_router(dashboard.router)
+app.include_router(geoai.router)
 
 
 # --- Root Endpoint ---

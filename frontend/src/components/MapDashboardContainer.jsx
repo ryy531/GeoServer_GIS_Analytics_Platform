@@ -1,14 +1,7 @@
 // File: frontend/src/components/MapDashboardContainer.jsx
 
-import React, { useEffect, useState, useRef } from "react";
-// Import all necessary functions from our apiService
-import {
-  getProvinces,
-  getProvinceBounds,
-  getFacilityStats,
-  getPopulationPyramid,
-} from "../services/apiService";
-import "../App.css";
+// --- React and Library Imports ---
+import React, { useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -17,65 +10,85 @@ import {
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import AnalysisResultLayer from "./AnalysisResultLayer";
-import MapClickHandler from "./MapClickHandler";
+
+// --- Service Imports ---
+// We import all our data-fetching functions from a dedicated service file.
+import {
+  getProvinces,
+  getProvinceBounds,
+  getFacilityStats,
+  getPopulationPyramid,
+} from "../services/apiService";
+
+// --- Component Imports ---
+// We import all the child components that make up our UI.
 import Dashboard from "./Dashboard";
 import CollapsiblePanel from "./CollapsiblePanel";
 import PopulationPyramidChart from "./PopulationPyramidChart";
+import MapClickHandler from "./MapClickHandler";
+import AnalysisResultLayer from "./AnalysisResultLayer";
+import CollapsibleSidebar from "./CollapsibleSidebar"; // The new sidebar component
+import GeoAIAnalyzer from "./GeoAIAnalyzer"; // The new AI analyzer component
 
-// --- Helper Component: MapController ---
-// Defined outside the main component to prevent re-creation on every render.
-// Its job is to perform map actions like fitBounds or resetting the view.
-function MapController({
-  bounds,
-  selectedProvince,
-  initialPosition,
-  initialZoom,
-}) {
+// --- Styling ---
+import "../App.css";
+
+// =================================================================
+//  Helper Component: MapController
+//  This component is a child of MapContainer and allows us to
+//  programmatically control the map's view (e.g., zoom, pan).
+// =================================================================
+function MapController({ bounds, initialPosition, initialZoom }) {
+  // Get the map instance from the React-Leaflet context.
   const map = useMap();
-  const lastFittedProvinceRef = useRef(null);
 
+  // This `useEffect` hook runs whenever the 'bounds' prop changes.
   useEffect(() => {
-    // Only refit the map if the selected province has actually changed.
-    // This prevents unwanted re-focusing when other parts of the app cause a re-render.
-    if (selectedProvince !== lastFittedProvinceRef.current) {
-      if (bounds) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-      } else {
-        // This handles the "Nationwide" case where bounds are null.
-        map.setView(initialPosition, initialZoom);
-      }
-      // Update the ref to the province we just fitted.
-      lastFittedProvinceRef.current = selectedProvince;
+    if (bounds) {
+      // If a specific province's bounds are provided, fit the map to them.
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+      // If bounds are null (e.g., "Nationwide" is selected), reset to the initial view.
+      map.setView(initialPosition, initialZoom);
     }
-  }, [bounds, selectedProvince, map, initialPosition, initialZoom]);
-  return null;
+  }, [bounds, map, initialPosition, initialZoom]); // Dependencies for this effect.
+
+  return null; // This component does not render any visible HTML.
 }
 
-// --- Main Container Component ---
-// This component acts as the "brain" for our dashboard and map.
+// =================================================================
+//  Main Component: MapDashboardContainer
+//  This is the primary component that orchestrates the entire application.
+//  It manages state, fetches data, and arranges all other components.
+// =================================================================
 function MapDashboardContainer() {
   // --- State Management ---
-  const [provinces, setProvinces] = useState([]);
-  const [selectedProvince, setSelectedProvince] = useState("");
-  const [bounds, setBounds] = useState(null);
-  const [cqlFilter, setCqlFilter] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [populationData, setPopulationData] = useState(null);
-  const [analysisData, setAnalysisData] = useState(null);
-  const [clickedPoint, setClickedPoint] = useState(null);
+  // We use the `useState` hook to manage the application's state.
+  const [provinces, setProvinces] = useState([]); // Holds the list of all provinces for the dropdown.
+  const [selectedProvince, setSelectedProvince] = useState(""); // Tracks the currently selected province.
+  const [bounds, setBounds] = useState(null); // The map bounds for the selected province.
+  const [cqlFilter, setCqlFilter] = useState(null); // The CQL filter string for GeoServer layers.
+  const [stats, setStats] = useState(null); // Facility statistics for the dashboard.
+  const [populationData, setPopulationData] = useState(null); // Data for the population pyramid chart.
+  const [analysisData, setAnalysisData] = useState(null); // Data from nearby facility analysis.
+  const [clickedPoint, setClickedPoint] = useState(null); // Lat/Lng of the user's click on the map.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
-  // --- Map Configuration Constants ---
+  // --- Configuration Constants ---
+  // Storing configuration values here makes them easy to change.
   const initialPosition = [30.3, 69.3];
   const initialZoom = 6;
-  const geoServerBaseUrl =
-    "http://localhost:8080/geoserver/geo_server_practice/wms";
+  const geoServerBaseUrl = import.meta.env.VITE_GEOSERVER_BASE_URL;
   const provinceLayerName = "geo_server_practice:admin_county_polygon";
   const educationLayerName = "geo_server_practice:education_facilities_points";
 
   // --- Data Fetching Effects ---
 
-  // Effect to fetch the list of provinces only once when the component mounts.
+  // Effect #1: Fetch the list of provinces.
+  // This runs only once when the component first mounts.
   useEffect(() => {
     getProvinces()
       .then((data) => {
@@ -84,69 +97,50 @@ function MapDashboardContainer() {
       .catch((error) => {
         console.error("Failed to fetch provinces:", error);
       });
-  }, []); // Empty dependency array ensures this runs only once.
+  }, []); // The empty dependency array `[]` ensures it runs only once.
 
-  // Effect to run whenever the selectedProvince state changes.
+  // Effect #2: Fetch data for the selected province.
+  // This runs whenever the `selectedProvince` state changes.
   useEffect(() => {
-    // This flag prevents state updates if the component unmounts or if the
-    // dependency (selectedProvince) changes before the async operations complete.
-    let isMounted = true;
+    let isMounted = true; // Flag to prevent state updates on unmounted components.
 
     if (selectedProvince) {
-      // 1. Fetch the geographical bounds for the selected province to zoom the map.
-      getProvinceBounds(selectedProvince)
-        .then((newBounds) => {
-          if (isMounted) setBounds(newBounds);
-        })
-        .catch((error) =>
-          console.error("Failed to fetch province bounds:", error)
-        );
-      // 2. Fetch the facility statistics for the selected province.
-      getFacilityStats(selectedProvince)
-        .then((newStats) => {
-          if (isMounted) setStats(newStats);
-        })
-        .catch((error) =>
-          console.error("Failed to fetch facility stats:", error)
-        );
-
-      // Fetch population pyramid data for the selected province.
-      getPopulationPyramid(selectedProvince)
-        .then((data) => {
-          if (isMounted) setPopulationData(data);
-        })
-        .catch((error) =>
-          console.error("Failed to fetch population pyramid data:", error)
-        );
-
-      // 3. Create a CQL filter string to filter map layers.
+      // --- A province is selected ---
+      // 1. Fetch its geographical bounds to zoom the map.
+      getProvinceBounds(selectedProvince).then((newBounds) => {
+        if (isMounted) setBounds(newBounds);
+      });
+      // 2. Fetch its facility statistics for the dashboard.
+      getFacilityStats(selectedProvince).then((newStats) => {
+        if (isMounted) setStats(newStats);
+      });
+      // 3. Fetch its population data for the pyramid chart.
+      getPopulationPyramid(selectedProvince).then((data) => {
+        if (isMounted) setPopulationData(data);
+      });
+      // 4. Create a CQL filter to apply to the WMS layers.
       const escapedProvince = selectedProvince.replace(/'/g, "''");
       const filter = `province_name = '${escapedProvince}'`;
       if (isMounted) setCqlFilter(filter);
     } else {
-      // If no province is selected, reset all related states.
+      // --- "Nationwide" is selected ---
+      // Reset all province-specific state.
       if (isMounted) {
         setCqlFilter(null);
         setStats(null);
         setBounds(null);
       }
-
-      // Fetch nationwide population data when no province is selected.
-      getPopulationPyramid("Nationwide")
-        .then((data) => {
-          if (isMounted) setPopulationData(data);
-        })
-        .catch((error) =>
-          console.error("Failed to fetch population pyramid data:", error)
-        );
+      // Fetch the nationwide population data.
+      getPopulationPyramid("Nationwide").then((data) => {
+        if (isMounted) setPopulationData(data);
+      });
     }
 
-    // Cleanup function to run when the component unmounts or before the effect re-runs.
-    // This prevents setting state on an unmounted component and fixes race conditions.
+    // Cleanup function: runs when the component unmounts or before the effect re-runs.
     return () => {
       isMounted = false;
     };
-  }, [selectedProvince]); // This effect depends on the selectedProvince state.
+  }, [selectedProvince]); // This effect depends on the `selectedProvince` state.
 
   // --- Event Handlers ---
   const handleAnalysisData = (data, latlng) => {
@@ -156,14 +150,18 @@ function MapDashboardContainer() {
   };
 
   // --- Render ---
+  // This JSX defines the structure of our application's UI.
   return (
     <div className="App">
+      {/* Top-left dashboard for province selection */}
       <Dashboard
         provinces={provinces}
         selectedProvince={selectedProvince}
         onProvinceChange={setSelectedProvince}
         stats={stats}
       />
+
+      {/* The main interactive map */}
       <MapContainer
         center={initialPosition}
         zoom={initialZoom}
@@ -171,19 +169,27 @@ function MapDashboardContainer() {
       >
         <MapController
           bounds={bounds}
-          selectedProvince={selectedProvince}
           initialPosition={initialPosition}
           initialZoom={initialZoom}
         />
 
+        {/* Layer control for switching basemaps and toggling overlays */}
         <LayersControl position="topright">
+          {/* Base Maps */}
           <LayersControl.BaseLayer checked name="OpenStreetMap">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
           </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="Satellite View">
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="&copy; Esri &mdash; Source: Esri & others"
+            />
+          </LayersControl.BaseLayer>
 
+          {/* Data Overlays from GeoServer */}
           <LayersControl.Overlay checked name="Provinces">
             <WMSTileLayer
               url={geoServerBaseUrl}
@@ -192,33 +198,29 @@ function MapDashboardContainer() {
               transparent={true}
             />
           </LayersControl.Overlay>
-
           <LayersControl.Overlay checked name="Education Facilities">
             <WMSTileLayer
-              key={cqlFilter || "all-facilities"}
+              key={cqlFilter || "all-facilities"} // `key` helps React re-render the layer when the filter changes
               url={geoServerBaseUrl}
               layers={educationLayerName}
               format="image/png"
               transparent={true}
-              // --- 这是修正后的关键部分 ---
-              // 使用三元运算符：如果 cqlFilter 有值，就创建 params 对象；否则，就传一个空对象。
               params={cqlFilter ? { cql_filter: cqlFilter } : {}}
             />
           </LayersControl.Overlay>
-
           <LayersControl.Overlay name="Population (Nationwide)">
             <WMSTileLayer
-              key={cqlFilter || "all-population"} // Also apply the filter to the population layer
+              key={cqlFilter || "all-population"}
               url={geoServerBaseUrl}
               layers="geo_server_practice:pak_unadj_constrained"
               format="image/png"
               transparent={true}
-              // Correctly apply the filter only when it exists
               params={cqlFilter ? { cql_filter: cqlFilter } : {}}
             />
           </LayersControl.Overlay>
         </LayersControl>
 
+        {/* Components for handling map interactions and displaying results */}
         <MapClickHandler onDataFetched={handleAnalysisData} />
         <AnalysisResultLayer
           analysisData={analysisData}
@@ -226,7 +228,16 @@ function MapDashboardContainer() {
         />
       </MapContainer>
 
-      {/* --- 新的可折叠面板，用于显示图表 --- */}
+      {/* The new collapsible sidebar on the right for AI tools */}
+      <CollapsibleSidebar
+        title="GeoAI Analyzer"
+        isOpen={isSidebarOpen}
+        onToggle={handleSidebarToggle}
+      >
+        <GeoAIAnalyzer />
+      </CollapsibleSidebar>
+
+      {/* The collapsible panel at the bottom for charts */}
       {populationData && (
         <CollapsiblePanel
           title={`Population Pyramid: ${selectedProvince || "Nationwide"}`}

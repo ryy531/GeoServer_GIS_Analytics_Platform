@@ -74,3 +74,134 @@
   padding: 15px 20px;
   max-height: 500px; /* Should be larger than the chart's height */
 }
+
+/* --- Final Collapsible Sidebar Styles (Protruding Tab) --- */
+
+/* The main container that slides */
+.collapsible-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 380px; /* The width of the panel */
+  max-width: 90vw;
+  z-index: 1010;
+  transition: transform 0.3s ease-in-out;
+  /* When closed, slide it off-screen to the right */
+  transform: translateX(100%);
+}
+
+/* When open, slide it back into view */
+.collapsible-sidebar.open {
+  transform: translateX(0%);
+}
+
+/* The panel that holds the content */
+.sidebar-panel {
+  width: 100%;
+  height: 100%;
+  background-color: #242424;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* The toggle button that sticks out */
+.sidebar-toggle-button {
+  position: absolute;
+  top: 50%;
+  /* This is the magic: position it to the LEFT of the panel's edge */
+  left: -40px;
+  transform: translateY(-50%);
+
+  /* Style it as a vertical tab */
+  width: 40px;
+  height: auto; /* Height will be based on content */
+  padding: 15px 0;
+
+  /* Let's make it red as you suggested! */
+  background-color: #a94442; /* A nice red color */
+  color: white;
+  border: none;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+
+  /* Make the text vertical */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Panel's internal styling */
+.sidebar-header {
+  padding: 15px;
+  background-color: #333;
+}
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+.sidebar-content {
+  padding: 15px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+/* --- GeoAI Analyzer Internal Styles --- */
+
+/* The container for the analysis results list */
+.geoai-results-list {
+  margin-top: 15px;
+  border-top: 1px solid #555;
+  padding-top: 15px;
+  /* Allows the list to take up all remaining vertical space */
+  flex-grow: 1;
+  overflow-y: auto; /* Enables scrolling for long lists */
+  min-height: 0;
+}
+
+/* Each individual item in the results list */
+.geoai-result-item {
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  cursor: pointer; /* Shows a clickable hand cursor on hover */
+  border: 1px solid #444;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* The style for an item when the mouse hovers over it */
+.geoai-result-item:hover {
+  background-color: #555;
+  border-color: #777;
+}
+
+/* The style for an item when it is selected/highlighted */
+.geoai-result-item.highlighted {
+  background-color: #007bff; /* A bright blue color */
+  border-color: #0056b3;
+  color: white;
+}
+/* --- GeoAI Analyzer Layout Fix for Tall Images --- */
+
+/* This is the container for our canvas */
+.geoai-canvas-wrapper {
+  margin-top: 15px;
+  border: 1px solid #444; /* Add a border to visually contain the image */
+
+  /* --- This is the core of the fix --- */
+  max-height: 45vh; /* Set a maximum height (45% of the viewport/screen height) */
+  overflow-y: auto; /* If the image inside is taller, make THIS container scrollable */
+
+  /* These two lines help the browser calculate the layout correctly */
+  display: flex;
+  min-height: 0;
+}
+
+/* This ensures the canvas itself resizes properly within the wrapper */
+.geoai-canvas-wrapper canvas {
+  max-width: 100%;
+}

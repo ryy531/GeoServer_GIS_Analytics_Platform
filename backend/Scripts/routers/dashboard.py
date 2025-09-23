@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+# File: backend/Scripts/routers/dashboard.py
+
+from fastapi import APIRouter, Path
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -8,7 +10,11 @@ from ..database import engine
 router = APIRouter()
 
 
-@router.get("/api/provinces")
+@router.get(
+    "/api/provinces",
+    summary="Get List of All Provinces",
+    description="Retrieves a sorted list of all unique province names available in the database.",
+)
 def get_provinces():
     SQL_SENTENCE = text(
         "SELECT DISTINCT name FROM admin_county_polygon ORDER BY name ASC;"
@@ -16,16 +22,28 @@ def get_provinces():
     conn = engine.connect()
     try:
         result = conn.execute(SQL_SENTENCE).all()
-        provinces = []
-        for row in result:
-            provinces = [row[0] for row in result]
+        provinces = [row[0] for row in result]
     finally:
         conn.close()
     return provinces
 
 
-@router.get("/api/province_bounds/{province_name}")
-def get_province_bounds(province_name: str):
+@router.get(
+    "/api/province_bounds/{province_name}",
+    summary="Get Bounding Box for a Province",
+    description="Takes a province name and returns its geographical bounding box as a nested list of coordinates [[min_lat, min_lon], [max_lat, max_lon]], suitable for use with Leaflet's fitBounds function.",
+)
+def get_province_bounds(
+    province_name: str = Path(
+        ...,  # '...' means the parameter is required
+        description="The exact name of the province to query.",
+        examples=["Punjab"],
+    )
+):
+    """
+    Fetches the bounding box for a given province.
+    - **province_name**: The name of the province.
+    """
     SQL_SENTENCE = text(
         "SELECT ST_Extent(geom) FROM admin_county_polygon WHERE name = :p_name"
     )
@@ -33,6 +51,9 @@ def get_province_bounds(province_name: str):
     try:
         result = conn.execute(SQL_SENTENCE, {"p_name": province_name})
         box_string = result.scalar_one_or_none()
+        if not box_string:
+            return None  # Or raise HTTPException(status_code=404, detail="Province not found")
+
         print(f"Database returned BBOX string for {province_name}: {box_string}")
         coords_part = box_string.replace("BOX(", "").replace(")", "")
         coords_part = coords_part.replace(",", " ")
@@ -51,13 +72,18 @@ def get_province_bounds(province_name: str):
     return leaflet_bounds
 
 
-# File: backend/Scripts/routers/dashboard.py
-
-# ... (在文件顶部确保你导入了 text 和 engine) ...
-
-
-@router.get("/api/facility_stats/{province_name}")
-def get_facility_stats(province_name: str):
+@router.get(
+    "/api/facility_stats/{province_name}",
+    summary="Get Facility Statistics for a Province",
+    description="Calculates the total count of educational facilities within a specific province and also returns the total count of facilities nationwide for comparison.",
+)
+def get_facility_stats(
+    province_name: str = Path(
+        ...,
+        description="The name of the province for which to calculate statistics.",
+        examples=["Sindh"],
+    )
+):
     """
     Calculates the count of facilities in a specific province and the total count nationwide.
     """
@@ -87,25 +113,29 @@ def get_facility_stats(province_name: str):
     }
 
 
-@router.get("/api/population_pyramid/{province_name}")
-def get_population_pyramid_data(province_name: str):
+@router.get(
+    "/api/population_pyramid/{province_name}",
+    summary="Get Population Pyramid Data",
+    description="Retrieves population data aggregated by age groups and gender for a specified province. Use 'Nationwide' as province_name to get data for the entire country.",
+)
+def get_population_pyramid_data(
+    province_name: str = Path(
+        ...,
+        description="The name of the province or the string 'Nationwide'.",
+        examples=["Nationwide"],
+    )
+):
     """
     Calculates population distribution by age and gender for a specific province or nationwide.
     If 'Nationwide' is passed as province_name, it calculates for the whole country.
     """
     params = {}
     where_clause = ""
-    # If a specific province is requested (not 'Nationwide'), add a WHERE clause.
     if province_name != "Nationwide":
         where_clause = "WHERE province_name = :p_name"
         params["p_name"] = province_name
 
-    # 这是动态生成SQL查询语句的关键部分。
-    # 我们根据表结构定义年龄分组。
     age_groups = [0, 1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
-
-    # 循环生成 `SUM("column") as alias` 字符串列表。
-    # PostgreSQL中的列名需要用双引号括起来。
     sum_clauses = []
     for gender_prefix in ["f", "m"]:
         for age in age_groups:
@@ -113,14 +143,13 @@ def get_population_pyramid_data(province_name: str):
             alias = f"{gender_prefix}_{age}"
             sum_clauses.append(f"SUM({column_name}) as {alias}")
 
-    # 用逗号连接所有SUM子句，形成SELECT语句的主体。
     select_sums = ", ".join(sum_clauses)
-
-    # 使用f-string构建最终的SQL查询。
     sql_query = text(f"SELECT {select_sums} FROM pak_unadj_constrained {where_clause}")
 
     with engine.connect() as conn:
         result = conn.execute(sql_query, params).first()
+        if not result:
+            return {}  # Return empty if no data
         result_dict = dict(result._mapping)
         for key, value in result_dict.items():
             result_dict[key] = int(value) if value is not None else 0
