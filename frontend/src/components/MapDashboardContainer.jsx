@@ -1,7 +1,7 @@
 // File: frontend/src/components/MapDashboardContainer.jsx
 
 // --- React and Library Imports ---
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -42,16 +42,26 @@ function MapController({ bounds, initialPosition, initialZoom }) {
   // Get the map instance from the React-Leaflet context.
   const map = useMap();
 
-  // This `useEffect` hook runs whenever the 'bounds' prop changes.
+  // Use a ref to track the previous value of bounds to prevent unnecessary re-renders.
+  const prevBoundsRef = useRef();
+
+  // This effect now only triggers a map view change when the `bounds` prop *actually* changes,
+  // ignoring changes from parent component re-renders where `bounds` remains the same.
   useEffect(() => {
-    if (bounds) {
-      // If a specific province's bounds are provided, fit the map to them.
-      map.fitBounds(bounds, { padding: [50, 50] });
-    } else {
-      // If bounds are null (e.g., "Nationwide" is selected), reset to the initial view.
-      map.setView(initialPosition, initialZoom);
+    // Convert bounds to a string for simple comparison. null becomes "null".
+    const currentBoundsStr = JSON.stringify(bounds);
+    const prevBoundsStr = JSON.stringify(prevBoundsRef.current);
+
+    if (currentBoundsStr !== prevBoundsStr) {
+      if (bounds) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      } else {
+        map.setView(initialPosition, initialZoom);
+      }
     }
-  }, [bounds, map, initialPosition, initialZoom]); // Dependencies for this effect.
+    // Update the ref to the current bounds for the next render.
+    prevBoundsRef.current = bounds;
+  }, [bounds, map, initialPosition, initialZoom]);
 
   return null; // This component does not render any visible HTML.
 }
@@ -143,11 +153,13 @@ function MapDashboardContainer() {
   }, [selectedProvince]); // This effect depends on the `selectedProvince` state.
 
   // --- Event Handlers ---
-  const handleAnalysisData = (data, latlng) => {
-    console.log("Data received from click handler:", data);
-    setAnalysisData(data);
-    setClickedPoint(latlng);
-  };
+  // Wrap the handler in useCallback to prevent it from being recreated on every render.
+  // This stabilizes the prop passed to MapClickHandler and prevents unnecessary effect re-runs.
+  const handleAnalysisData = useCallback((data, latlng) => {
+    console.log("Data received from click handler:", data, latlng);
+    setAnalysisData(data); // Update analysis results
+    setClickedPoint(latlng); // Update the location of the click
+  }, []); // Empty dependency array means the function is created only once.
 
   // --- Render ---
   // This JSX defines the structure of our application's UI.
@@ -165,6 +177,7 @@ function MapDashboardContainer() {
       <MapContainer
         center={initialPosition}
         zoom={initialZoom}
+        doubleClickZoom={false} // <-- **CRITICAL FIX**: Disable default double-click zoom behavior
         style={{ height: "100vh", width: "100%" }}
       >
         <MapController
@@ -221,7 +234,10 @@ function MapDashboardContainer() {
         </LayersControl>
 
         {/* Components for handling map interactions and displaying results */}
-        <MapClickHandler onDataFetched={handleAnalysisData} />
+        <MapClickHandler
+          onDataFetched={handleAnalysisData}
+          onProvinceSelect={setSelectedProvince}
+        />
         <AnalysisResultLayer
           analysisData={analysisData}
           clickedPoint={clickedPoint}

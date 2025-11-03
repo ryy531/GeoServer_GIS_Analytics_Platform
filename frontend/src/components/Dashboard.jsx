@@ -17,7 +17,7 @@ function Dashboard({ provinces, selectedProvince, onProvinceChange, stats }) {
         ))}
       </select>
 
-      {/* --- 统计数据显示区 --- */}
+      {/* --- Statistics Display Area --- */}
       {stats && (
         <div className="stats-display">
           <hr />

@@ -1,3 +1,4 @@
+// frontend/src/hooks/useAnalysisLogic.js
 import { useRef } from "react";
 import L from "leaflet";
 import { getPopulationInBuffer } from "../services/apiService";
@@ -6,11 +7,11 @@ export const useAnalysisLogic = (map) => {
   const analysisCircleRef = useRef(null);
   const getColorByDensity = (density) => {
     if (density > 500) {
-      return { color: "#d9534f", fillColor: "#d9534f" }; // 红色
+      return { color: "#d9534f", fillColor: "#d9534f" }; // Red
     } else if (density > 100) {
-      return { color: "#f0ad4e", fillColor: "#f0ad4e" }; // 黄色
+      return { color: "#f0ad4e", fillColor: "#f0ad4e" }; // Yellow
     } else {
-      return { color: "#5cb85c", fillColor: "#5cb85c" }; // 绿色
+      return { color: "#5cb85c", fillColor: "#5cb85c" }; // Green
     }
   };
   const displayPopup = (featureToShow, title, populationResult, e) => {
@@ -32,15 +33,17 @@ export const useAnalysisLogic = (map) => {
       )} p/km²<br>`;
     }
     popupContent += `</div>`;
+    // Use e.latlng to ensure the popup always appears at the click location
     L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map);
   };
+
   const runAnalysis = (data, e) => {
     const pointFeature = data.features.find((feature) =>
       feature.id.startsWith("education_facilities_points")
     );
 
     if (pointFeature) {
-      // 1. 先画一个灰色的临时圆圈，给用户即时反馈
+      // 1. First, draw a temporary gray circle
       if (analysisCircleRef.current) {
         map.removeLayer(analysisCircleRef.current);
       }
@@ -49,15 +52,15 @@ export const useAnalysisLogic = (map) => {
       const radiusMeters = 5000;
       analysisCircleRef.current = L.circle(centerLatLng, {
         radius: radiusMeters,
-        color: "grey", // 临时占位颜色
+        color: "grey",
         fillColor: "#808080",
         fillOpacity: 0.2,
       }).addTo(map);
 
-      // 2. 显示一个临时的、不含人口信息的 Popup
+      // 2. Display a temporary Popup without population info
       displayPopup(pointFeature, "Facility Info", null, e);
 
-      // 3. 准备并发送后端请求
+      // 3. Prepare and send the backend request
       const analysisRequestData = {
         latitude: centerLatLng[0],
         longitude: centerLatLng[1],
@@ -68,29 +71,21 @@ export const useAnalysisLogic = (map) => {
         analysisRequestData.longitude,
         analysisRequestData.radius_m
       ).then((populationData) => {
-        // 这是从我们后端返回的人口和密度数据
-        // 4. 请求成功后，更新圆圈颜色和 Popup 内容
+        // 4. After the request succeeds, update the circle color and Popup content
         const density = populationData.population_density_per_km2;
         const newStyle = getColorByDensity(density);
 
         if (analysisCircleRef.current) {
           analysisCircleRef.current.setStyle(newStyle);
         }
-
-        // 重新调用 displayPopup，这次传入完整的人口数据
         displayPopup(pointFeature, "Facility Info", populationData, e);
       });
-    } else if (data.features && data.features.length > 0) {
-      // 如果点击的是多边形，逻辑不变
-      if (analysisCircleRef.current) {
-        // 如果之前有分析圈，就清除掉
-        map.removeLayer(analysisCircleRef.current);
-        analysisCircleRef.current = null;
-      }
-      const polygonFeature = data.features[0];
-      displayPopup(polygonFeature, "Province Info", null, e);
-    } else {
-      // 如果点击的是空白，逻辑不变
+    }
+    // *** CRITICAL FIX: Removed the "else if" block that triggered zooming ***
+    // Previously, the "else if" block here would catch the province polygon and trigger a zoom
+    // Now all province logic is handled in the dblclick handler in MapClickHandler
+    else {
+      // If the click is not on a facility point (pointFeature), clear the analysis circle
       if (analysisCircleRef.current) {
         map.removeLayer(analysisCircleRef.current);
         analysisCircleRef.current = null;

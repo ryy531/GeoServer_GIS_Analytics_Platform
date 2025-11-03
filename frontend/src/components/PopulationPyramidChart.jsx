@@ -19,13 +19,12 @@ ChartJS.register(
   Legend
 );
 
-// 这个辅助函数将处理从API获取的原始数据，并将其转换为Chart.js可以理解的格式。
 const processDataForChart = (apiData) => {
   if (!apiData) {
     return { labels: [], datasets: [] };
   }
 
-  // 定义年龄段标签
+  // Define age group labels
   const labels = [
     "0-4",
     "5-9",
@@ -46,17 +45,17 @@ const processDataForChart = (apiData) => {
     "80+",
   ];
 
-  // 从API数据中提取并组合年龄组数据
+  // Extract and combine age group data from API data
   const ageGroups = [
     5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
   ];
 
   const femaleData = [
-    (apiData.f_0 || 0) + (apiData.f_1 || 0), // 合并 0岁 和 1-4岁
+    (apiData.f_0 || 0) + (apiData.f_1 || 0), // Combine 0 years old and 1-4 years old
     ...ageGroups.map((age) => apiData[`f_${age}`] || 0),
   ];
 
-  // 男性数据设为负数，以便在图表上显示在左侧
+  // Male data is set to negative to display on the left side of the chart
   const maleData = [
     -((apiData.m_0 || 0) + (apiData.m_1 || 0)),
     ...ageGroups.map((age) => -(apiData[`m_${age}`] || 0)),
@@ -87,41 +86,41 @@ function PopulationPyramidChart({ data }) {
   const chartData = processDataForChart(data);
 
   const options = {
-    indexAxis: "y", // 这使得条形图变为水平方向
+    indexAxis: "y", // This makes the bar chart horizontal
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: {
-        stacked: true, // 堆叠条形图
+        stacked: true, // Stacked bar chart
         ticks: {
-          // 这个回调函数将X轴的标签格式化为正数
+          // This callback function formats the X-axis labels as positive numbers
           callback: function (value) {
             return Math.abs(value).toLocaleString();
           },
-          color: "#333", // 设置X轴刻度文字颜色
+          color: "#333", // Set X-axis tick label color
         },
         title: {
           display: true,
           text: "Population Count",
-          color: "#333", // 设置X轴标题颜色
+          color: "#333", // Set X-axis title color
         },
       },
       y: {
         stacked: true,
         ticks: {
-          color: "#333", // 设置Y轴刻度文字颜色
+          color: "#333", // Set Y-axis tick label color
         },
-        title: { display: true, text: "Age Group", color: "#333" }, // 设置Y轴标题颜色
+        title: { display: true, text: "Age Group", color: "#333" }, // Set Y-axis title color
       },
     },
     plugins: {
       legend: {
         labels: {
-          color: "#333", // 设置图例文字颜色
+          color: "#333", // Set legend text color
         },
       },
       tooltip: {
-        // 这个回调函数将提示框中的值格式化为正数
+        // This callback function formats the values in the tooltip as positive numbers
         callbacks: {
           label: function (context) {
             return `${context.dataset.label}: ${Math.abs(
