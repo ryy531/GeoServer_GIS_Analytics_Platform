@@ -12,6 +12,18 @@ A full-stack web GIS application I designed and built on my own. It maps educati
 - **GeoAI object detection:** Upload an image and a YOLOv8 model I fine-tuned on my own dataset detects objects and draws interactive bounding boxes.
 - **Real-world data:** Facilities from OpenStreetMap, district boundaries from Who's On First, and population from WorldPop rasters processed with my own pipeline ([Download-and-Merge-Tif-file](https://github.com/ryy531/Download-and-Merge-Tif-file)).
 
+## Relevance to humanitarian and development work
+
+The platform is a small-scale version of the analysis that information management and GIS teams run for education, health and disaster programmes:
+
+- **Service accessibility (catchment analysis):** how many people live within a set distance of a facility. Here it is the population within 5 km of each school; the same query works for clinics, water points or shelters.
+- **Population coverage estimates from gridded data:** totals come from WorldPop population rasters, converted to points and summed inside each catchment, so estimates do not depend on census boundaries.
+- **Age and sex disaggregation:** the dashboard breaks each district's population into 18 age groups by sex, which is what is needed to estimate a school-age or other target population.
+- **Facility gap overview by district:** facility counts per district against the national total show where services are thin.
+- **Built entirely on open data and open-source tools:** OpenStreetMap, Who's On First, WorldPop, PostGIS, GeoServer and Leaflet, so it can be reproduced for another country without licence costs.
+
+It is a personal project and has not been deployed by an organization.
+
 ## How the buffer analysis works
 
 1. The React + Leaflet front end captures the click and sends the coordinates and radius to a FastAPI endpoint.
